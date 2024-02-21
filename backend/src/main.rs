@@ -1,12 +1,13 @@
-use rocket::futures::{SinkExt, StreamExt};
+use rocket::futures::StreamExt;
 use rocket_ws::{Channel, WebSocket};
 
 #[rocket::get("/")]
 fn chat(ws: WebSocket) -> Channel<'static> {
-    ws.channel(move |mut stream| {
+    ws.channel(move |stream| {
         Box::pin(async move {
-            while let Some(message) = stream.next().await {
-                let _ = stream.send(message?).await;
+            let (mut ws_sink, mut ws_stream) = stream.split();
+            while let Some(message) = ws_stream.next().await {
+                // let _ = ws_sink.send(message?).await;
             }
 
             Ok(())
