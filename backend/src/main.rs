@@ -18,37 +18,44 @@ struct ChatRoom {
     connections: Mutex<HashMap<usize, SplitSink<DuplexStream, Message>>>,
 }
 
+impl ChatRoom {
+    // method to add a connection
+    pub async fn add_connection(&self, id: usize, sink: SplitSink<DuplexStream, Message>) {
+        // whenever a user connects, add them into the connections list
+        let mut conns = self.connections.lock().await;
+        conns.insert(id, sink);
+    }
+    // remove a connection
+    pub async fn remove_connection(&self, id: usize) {
+        let mut conns = self.connections.lock().await;
+        conns.remove(&id);
+    }
+    // send a message
+    pub async fn broadcast_message(&self, message: Message) {
+        // lock connections mutex
+        let mut conns = self.connections.lock().await;
+
+        // iterate through the connections
+        for (_key, conn) in conns.iter_mut() {
+            // send the message to each connection
+            let _ = conn.send(message.clone()).await;
+        }
+    }
+}
+
 #[rocket::get("/")]
 fn chat<'r>(ws: WebSocket, state: &'r State<ChatRoom>) -> Channel<'r> {
     ws.channel(move |stream| {
         Box::pin(async move {
-            // this block represents when a user is connected
             let user_id = USER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
             let (ws_sink, mut ws_stream) = stream.split();
-            {
-                // whenever a user connects, add them into the connections list
-                let mut conns = state.connections.lock().await;
-                conns.insert(user_id, ws_sink);
-            }
+            state.add_connection(user_id, ws_sink).await;
+
             // whenever another websocket sends a message
             while let Some(message) = ws_stream.next().await {
-                // block scope to allow mutex lock to expire
-                {
-                    // lock connections mutex
-                    let mut conns = state.connections.lock().await;
-                    let msg = message?;
-                    // iterate through the connections
-                    for (_key, conn) in conns.iter_mut() {
-                        // send the message to each connection
-                        let _ = conn.send(msg.clone()).await;
-                    }
-                }
+                state.broadcast_message(message?).await;
             }
-            {
-                // remove each connection from the connections hashmap
-                let mut conns = state.connections.lock().await;
-                conns.remove(&user_id);
-            }
+            state.remove_connection(user_id).await;
 
             Ok(())
         })
