@@ -4,7 +4,8 @@ use std::{
 };
 
 use rocket::{
-    futures::{stream::SplitSink, StreamExt},
+    futures::{stream::SplitSink, SinkExt, StreamExt},
+    tokio::sync::Mutex,
     State,
 };
 use rocket_ws::{stream::DuplexStream, Channel, Message, WebSocket};
@@ -13,19 +14,40 @@ static USER_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 #[derive(Default)]
 struct ChatRoom {
-    connections: HashMap<usize, SplitSink<DuplexStream, Message>>,
+    // wrap the Hashmap in a Mutex type to provide the ability to lock
+    connections: Mutex<HashMap<usize, SplitSink<DuplexStream, Message>>>,
 }
 
 #[rocket::get("/")]
-fn chat(ws: WebSocket, state: &State<ChatRoom>) -> Channel<'static> {
+fn chat<'r>(ws: WebSocket, state: &'r State<ChatRoom>) -> Channel<'r> {
     ws.channel(move |stream| {
         Box::pin(async move {
             // this block represents when a user is connected
             let user_id = USER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-
-            let (mut ws_sink, mut ws_stream) = stream.split();
+            let (ws_sink, mut ws_stream) = stream.split();
+            {
+                // whenever a user connects, add them into the connections list
+                let mut conns = state.connections.lock().await;
+                conns.insert(user_id, ws_sink);
+            }
+            // whenever another websocket sends a message
             while let Some(message) = ws_stream.next().await {
-                // let _ = ws_sink.send(message?).await;
+                // block scope to allow mutex lock to expire
+                {
+                    // lock connections mutex
+                    let mut conns = state.connections.lock().await;
+                    let msg = message?;
+                    // iterate through the connections
+                    for (_key, conn) in conns.iter_mut() {
+                        // send the message to each connection
+                        let _ = conn.send(msg.clone()).await;
+                    }
+                }
+            }
+            {
+                // remove each connection from the connections hashmap
+                let mut conns = state.connections.lock().await;
+                conns.remove(&user_id);
             }
 
             Ok(())
