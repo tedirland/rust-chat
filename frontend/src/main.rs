@@ -54,7 +54,7 @@ fn App() -> Html {
         <div class="row">
                 <div class="input-group">
                 <textarea class="form-control" onchange={on_message_change} value={new_message}></textarea>
-                <button class="btn btn-info" type="submit" onclick={on_submit}>{"Send"}</button>
+                <button class="btn btn-info px-2" type="submit" onclick={on_submit}>{"Send"}</button>
                 </div>
         </div>
         </div>
