@@ -36,15 +36,28 @@ fn App() -> Html {
     });
 
     html! {
-    <>
+    <div class="container">
+        <div class="row">
         <ul id="chat">
             {
-                messages.iter().map(|m| html!{<li>{m}</li>}).collect::<Html>()
+                messages.iter().map(|m| html!{
+                    <div class="card mt-2">
+                        <div class="card-body">
+                            {m}
+                        </div>
+                    </div>
+                }
+                ).collect::<Html>()
             }
         </ul>
-        <textarea onchange={on_message_change} value={new_message}></textarea>
-        <button type="submit" onclick={on_submit}>{"Send"}</button>
-        </>
+        </div>
+        <div class="row">
+                <div class="input-group">
+                <textarea class="form-control" onchange={on_message_change} value={new_message}></textarea>
+                <button class="btn btn-info" type="submit" onclick={on_submit}>{"Send"}</button>
+                </div>
+        </div>
+        </div>
 
     }
 }
