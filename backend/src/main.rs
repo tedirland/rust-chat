@@ -3,12 +3,15 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+use chrono::Utc;
+use common::ChatMessage;
 use rocket::{
     futures::{stream::SplitSink, SinkExt, StreamExt},
     tokio::sync::Mutex,
     State,
 };
 use rocket_ws::{stream::DuplexStream, Channel, Message, WebSocket};
+use serde_json::json;
 
 static USER_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
@@ -31,14 +34,21 @@ impl ChatRoom {
         conns.remove(&id);
     }
     // send a message
-    pub async fn broadcast_message(&self, message: Message) {
+    pub async fn broadcast_message(&self, message: Message, author_id: usize) {
+        let chat_message = ChatMessage {
+            message: message.to_string(),
+            author: format!("User # {}", author_id),
+            created_at: Utc::now().naive_utc(),
+        };
         // lock connections mutex
         let mut conns = self.connections.lock().await;
 
         // iterate through the connections
         for (_key, conn) in conns.iter_mut() {
             // send the message to each connection
-            let _ = conn.send(message.clone()).await;
+            let _ = conn
+                .send(Message::Text(json!(chat_message).to_string()))
+                .await;
         }
     }
 }
@@ -53,7 +63,7 @@ fn chat<'r>(ws: WebSocket, state: &'r State<ChatRoom>) -> Channel<'r> {
 
             // whenever another websocket sends a message
             while let Some(message) = ws_stream.next().await {
-                state.broadcast_message(message?).await;
+                state.broadcast_message(message?, user_id).await;
             }
             state.remove_connection(user_id).await;
 
