@@ -1,3 +1,7 @@
+mod chat_input;
+mod message_list;
+mod users_list;
+
 use common::{ChatMessage, WebSocketMessage, WebSocketMessageType};
 use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
