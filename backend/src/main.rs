@@ -4,7 +4,7 @@ use std::{
 };
 
 use chrono::Utc;
-use common::ChatMessage;
+use common::{ChatMessage, WebSocketMessage};
 use rocket::{
     futures::{stream::SplitSink, SinkExt, StreamExt},
     tokio::sync::Mutex,
@@ -40,6 +40,11 @@ impl ChatRoom {
             author: format!("User # {}", author_id),
             created_at: Utc::now().naive_utc(),
         };
+        let websocket_message = WebSocketMessage {
+            message_type: common::WebSocketMessageType::NewMessage,
+            message: Some(chat_message),
+            users: None,
+        };
         // lock connections mutex
         let mut conns = self.connections.lock().await;
 
@@ -47,7 +52,7 @@ impl ChatRoom {
         for (_key, conn) in conns.iter_mut() {
             // send the message to each connection
             let _ = conn
-                .send(Message::Text(json!(chat_message).to_string()))
+                .send(Message::Text(json!(websocket_message).to_string()))
                 .await;
         }
     }

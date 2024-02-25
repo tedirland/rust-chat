@@ -1,6 +1,19 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
+#[derive(Deserialize, Serialize)]
+pub enum WebSocketMessageType {
+    NewMessage,
+    UsersList,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct WebSocketMessage {
+    pub message_type: WebSocketMessageType,
+    pub message: Option<ChatMessage>,
+    pub users: Option<Vec<String>>,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ChatMessage {
     pub message: String,
