@@ -53,7 +53,7 @@ fn App() -> Html {
                     <div class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h5>{m.author.clone()}</h5>
-                            <small>{m.created_at.format("Sent at %H:%M on %b %-d").to_string()}</small>
+                            <small>{m.created_at.format("Sent at %l %p on %b %-d").to_string()}</small>
                         </div>
                         <p>
                         {m.message.clone()}
