@@ -31,7 +31,13 @@ fn App() -> Html {
                     cloned_messages.push(msg);
                     messages_handle.set(cloned_messages)
                 }
-                WebSocketMessageType::UsersList => {}
+                WebSocketMessageType::UsersList => {
+                    // change value of users list
+                    let users = websocket_message
+                        .users
+                        .expect("Users list is not present on payload");
+                    users_handle.set(users);
+                }
             }
         }
     });
@@ -42,10 +48,10 @@ fn App() -> Html {
     });
 
     html! {
-        <div class="container">
+        <div class="container-fluid">
         <div class="row">
         <div class="col-sm-3">
-        <UsersList users={users.clone()}/>
+        <UsersList users={users}/>
         </div>
         <div class="col-sm-9">
         <MessageList messages={messages} />

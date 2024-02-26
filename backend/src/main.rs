@@ -60,7 +60,7 @@ impl ChatRoom {
     pub async fn broadcast_user_list(&self) {
         let mut conns = self.connections.lock().await;
         let mut users = vec![];
-        for (id, conn) in conns.iter_mut() {
+        for (id, _) in conns.iter_mut() {
             // send the message to each connection
             users.push(format!("User # {}", id));
         }
