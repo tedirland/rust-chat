@@ -2,17 +2,20 @@ mod chat_input;
 mod message_list;
 mod users_list;
 
-use common::{ChatMessage, WebSocketMessage, WebSocketMessageType};
-use web_sys::HtmlTextAreaElement;
+use common::{WebSocketMessage, WebSocketMessageType};
 use yew::prelude::*;
 use yew_hooks::use_websocket;
+
+use crate::chat_input::ChatInput;
+use crate::message_list::MessageList;
+use crate::users_list::UsersList;
 
 #[function_component]
 fn App() -> Html {
     let messages_handle = use_state(Vec::default);
     let messages = (*messages_handle).clone();
-    let new_message_handle = use_state(String::default);
-    let new_message = (*new_message_handle).clone();
+    let users_handle = use_state(Vec::default);
+    let users = (*users_handle).clone();
 
     let ws = use_websocket("ws://127.0.0.1:8000".to_string());
 
@@ -33,54 +36,28 @@ fn App() -> Html {
         }
     });
 
-    let cloned_new_message_handle = new_message_handle.clone();
-    let on_message_change = Callback::from(move |e: Event| {
-        let target = e.target_dyn_into::<HtmlTextAreaElement>();
-        if let Some(textarea) = target {
-            cloned_new_message_handle.set(textarea.value());
-        }
-    });
-
-    let cloned_new_message = new_message.clone();
     let cloned_ws = ws.clone();
-    let on_submit = Callback::from(move |_: MouseEvent| {
-        cloned_ws.send(cloned_new_message.clone());
-        new_message_handle.set("".to_string());
+    let send_message_callback = Callback::from(move |msg: String| {
+        cloned_ws.send(msg.clone());
     });
 
     html! {
-    <div class="container">
+        <div class="container">
+        <div class="row">
+        <div class="col-sm-3">
+        <UsersList users={users.clone()}/>
+        </div>
+        <div class="col-sm-9">
+        <MessageList messages={messages} />
+        </div>
 
-            {
-                messages.iter().map(|m| html!{
-                    // <div class="list-group-item list-group-item-action">
-                    //     <div class="d-flex w-100 justify-content-between">
-                    //         <h5>{m.author.clone()}</h5>
-                    //         <small>{m.created_at.format("Sent at %l %p on %b %-d").to_string()}</small>
-                    //     </div>
-                    //     <p>
-                    //     {m.message.clone()}
-                    // </p>
-                    // </div>
-                    <div class="card" style="width: 18rem;">
-                        <div class="card-body">
-                          <h5 class="card-title">{m.author.clone()}</h5>
-                          <h6 class="card-subtitle mb-2 text-body-secondary">{m.created_at.format("Sent at %l %p on %b %-d").to_string()}</h6>
-                          <p class="card-text">{m.message.clone()}</p>
-                        </div>
-                      </div>
-
-                }
-                ).collect::<Html>()
-            }
+        <div/>
 
         <div class="row">
-                <div class="input-group">
-                <textarea class="form-control" onchange={on_message_change} value={new_message}></textarea>
-                <button class="btn btn-info px-2" type="submit" onclick={on_submit}>{"Send"}</button>
-                </div>
+        <ChatInput send_message_callback ={send_message_callback} />
         </div>
         </div>
+    </div>
 
     }
 }
